@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import sys
 import argparse
 from typing import List, Dict
 import codecs
@@ -96,16 +99,21 @@ class Paper:
         self.original_title = data[5]
         self.year = data[7]
         self.date = data[8]
+        self.references = data[18]
         self.citations = data[19]
         self.estimated_citations = data[20]
         self.field = field
         self.authors : List[PaperAuthor] = []
+        self.referred_papers: List[Paper] = []
 
     def __str__(self):
-        return f"Paper(ID: {self.id}, Type: {self.doc_type}, Field: {self.field}, Title: {self.title}, Date: {self.date}, Authors: {len(self.authors)}, Citations: {self.citations})"
+        return f"Paper(ID: {self.id}, Type: {self.doc_type}, Field: {self.field}, Title: {self.title}, Date: {self.date}, Authors: {len(self.authors)}, Citations: {self.citations}, References: {self.references})"
 
     def add_author(self, author: PaperAuthor):
         self.authors.append(author)
+
+    def add_reference(self, paper: Paper):
+        self.referred_papers.append(paper)
 
 
 mag_to_node_idx = {}
@@ -116,6 +124,7 @@ affiliations: Dict[str, Affiliation] = {}
 
 
 def parse_data(data_dir):
+    sys.setrecursionlimit(50000)
     dataset = NodePropPredDataset(name = "ogbn-arxiv")
     graph, label = dataset[0]
 
@@ -164,8 +173,8 @@ def parse_data(data_dir):
 
 
     # process paper authors
-    with open(f"{data_dir}/paperAuthorAffilliations.txt", 'r') as aFile:
-        for idx, line in enumerate(aFile):
+    with open(f"{data_dir}/paperAuthorAffilliations.txt", 'r') as a_file:
+        for idx, line in enumerate(a_file):
             line = line.rstrip("\n").split("\t")
             author = PaperAuthor(line)
             if author.paper_id not in paper_info:
@@ -174,13 +183,23 @@ def parse_data(data_dir):
                 affiliation = affiliations[author.affiliation_id]
                 author.add_affiliation(affiliation)
             if idx % 5000 == 0:
-                print("Parsed {idx} authors")
+                print(f"Parsed {idx} authors")
             #print(author)
-            paperInfo[author.paper_id].add_author(author)
+            paper_info[author.paper_id].add_author(author)
+
+    # process paper references
+    with open(f"{data_dir}/paperReferences.txt", 'r') as a_file:
+        for idx, line in enumerate(a_file):
+            line = line.rstrip("\n").split("\t")
+            paper_id, paper_reference_id = line
+            # only keep track of references of papers within obgn-arxiv
+            if paper_id not in paper_info or paper_reference_id not in paper_info:
+                continue
+            paper_info[paper_id].add_reference(paper_info[paper_reference_id])
 
     print(f"Papers: {len(papers)}")
-    data = {"papers": papers, "affiliations": affiliations, "fields": field_mapping}
-    with open(f"dataset/papers.pkl", "wb") as handle:
+    data = {"papers": paper_info, "affiliations": affiliations, "fields": field_mapping}
+    with open(f"dataset/data.pkl", "wb") as handle:
         pickle.dump(data, handle)
     print("Done")
     

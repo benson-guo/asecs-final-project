@@ -1,7 +1,9 @@
 import argparse
+from typing import List, Dict
 import codecs
 import csv
 from ogb.nodeproppred import NodePropPredDataset
+import pickle
 
 field_mapping = {
     "0": "arxiv cs na",
@@ -48,11 +50,13 @@ field_mapping = {
 
 magToNodeIdx = {}
 magToField = {}
-paperInfo = {}
+paperInfo: DIct[str, Paper] = {}
+papers: List[Paper] = []
+affiliations: Dict[str, Affiliation] = {}
 
 # https://learn.microsoft.com/en-us/academic-services/graph/reference-data-schema#papers
 class Paper:
-    def __init__(self, data, field):
+    def __init__(self, data: List[str], field: str):
         assert len(data) == 26
         self.id = data[0]
         self.rank = data[1]
@@ -64,10 +68,53 @@ class Paper:
         self.citations = data[19]
         self.estimatedCitations = data[20]
         self.field = field
+        self.authors : List[PaperAuthor] = []
 
     def __str__(self):
-        return f"Paper(ID: {self.id}, Type: {self.docType}, Field: {self.field}, Title: {self.title}, Date: {self.date}, Citations: {self.citations})"
+        return f"Paper(ID: {self.id}, Type: {self.docType}, Field: {self.field}, Title: {self.title}, Date: {self.date}, Authors: {len(self.authors)}, Citations: {self.citations})"
+
+    def addAuthor(self, author: PaperAuthor):
+        self.authors.append(author)
+
+
        
+
+class Affiliation:
+    def __init__(self, data: List[str]):
+        assert len(data) == 14
+        self.id = data[0]
+        self.rank = data[1]
+        self.normalizedName = data[2]
+        self.name = data[3]
+        self.officialPage = data[5]
+        self.paperCount = data[7]
+        self.paperFamilyCount = data[8]
+        self.citationCount = data[9]
+        self.countryCode = data[10]
+        self.latitude = data[11]
+        self.longitude = data[12]
+
+    def __str__(self):
+        return f"Affiliation(ID: {self.id}, Name: {self.name}, Papers: {self.paperCount}, Citations: {self.citationCount}, Country: {self.countryCode})"
+
+
+# https://learn.microsoft.com/en-us/academic-services/graph/reference-data-schema#paper-author-affiliations
+class PaperAuthor:
+    def __init__(self, data: List[str]):
+        assert len(data) == 6
+        self.paperId = data[0]
+        self.authorId = data[1]
+        self.affiliationId = data[2]
+        self.authorSequenceNumber = data[3]
+        self.originalAuthor = data[4]
+        self.affiliation = None
+    
+    def __str__(self):
+        return f"PaperAuthor(Paper: {self.paperId}, Author: {self.authorId}:{self.originalAuthor}, Affiliation: {self.affiliationId}:{self.affiliation}, Author #: {self.authorSequenceNumber}"
+
+    def addAffiliation(self, affiliation: Affiliation):
+        self.affiliation = affiliation
+        
 
 def fix_nulls(s):
     for line in s:
@@ -89,6 +136,19 @@ def parse_data(data_dir):
             field = field_mapping[fieldIdx]
             magToField[mag] = field
     print(len(magToNodeIdx))
+
+
+    # process affiliations
+    with open(f"{data_dir}/affiliations.txt", 'r') as aFile:
+        for idx, line in enumerate(aFile):
+            line = line.rstrip("\n").split("\t")
+            affiliation = Affiliation(line)
+            affiliations[affiliation.id] = affiliation
+            #print(affiliation)
+    print("Processed affiliations")
+
+
+    # process papers
     with open(f"{data_dir}/papers.txt", 'r') as paperFile:
         for idx, line in enumerate(paperFile):
             line = line.rstrip("\n").split("\t")
@@ -96,16 +156,36 @@ def parse_data(data_dir):
             if paperId not in magToField:
                 # not part of ogbn-arxiv
                 continue
-            print(line)
+            #print(line)
             field = magToField[paperId]
             paper = Paper(line, field)
             paperInfo[paper.id] = paper
-            print(paper)
-            print(graph['node_year'][int(magToNodeIdx[paperId])].item())
-            import pdb
-            pdb.set_trace()
-            if idx > 10000:
+            papers.append(paper)
+            if len(papers) % 500 == 0:
+                print(f"Parsed {len(papers)} papers", flush=True)
                 break
+            #print(paper)
+            #print(graph['node_year'][int(magToNodeIdx[paperId])].item())
+
+    # process paper authors
+    with open(f"{data_dir}/paperAuthorAffilliations.txt", 'r') as aFile:
+        for idx, line in enumerate(aFile):
+            line = line.rstrip("\n").split("\t")
+            author = PaperAuthor(line)
+            if author.paperId not in paperInfo:
+                continue
+            if len(author.affiliationId) > 0:
+                affiliation = affiliations[author.affiliationId]
+                author.addAffiliation(affiliation)
+            print(author)
+            paperInfo[author.paperId].addAuthor(author)
+
+    print(f"Papers: {len(papers)}")
+    pickle.dump(papers, f"data/papers.pkl")
+    pass
+    import pdb
+    pdb.set_trace()
+    
 
 
 if __name__ == "__main__":

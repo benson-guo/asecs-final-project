@@ -128,7 +128,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-d",
         "--data_dir",
-        default="dataset",
+        default="data",
         help="Directory where data.pkl resides",
     )
     args = parser.parse_args()

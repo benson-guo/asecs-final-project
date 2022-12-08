@@ -199,7 +199,7 @@ def parse_data(data_dir):
 
     print(f"Papers: {len(papers)}")
     data = {"papers": paper_info, "affiliations": affiliations, "fields": field_mapping}
-    with open(f"dataset/data.pkl", "wb") as handle:
+    with open(f"data/data.pkl", "wb") as handle:
         pickle.dump(data, handle)
     print("Done")
     

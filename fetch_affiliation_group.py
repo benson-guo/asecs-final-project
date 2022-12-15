@@ -34,7 +34,7 @@ if __name__ == "__main__":
         default="data",
         help="Directory where data.pkl resides",
     )
-    parser.add_argument("-t", "-top", defaut=100, type=int, help="Number of top affiliations to process")
+    parser.add_argument("-t", "-top", defaut=100, type=int, help="Number of citations to threshold")
     args = parser.parse_args()
 
     with open(f"{args.data_dir}/data.pkl",'rb') as fh:

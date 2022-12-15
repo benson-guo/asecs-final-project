@@ -202,7 +202,6 @@ def parse_data(data_dir):
     with open(f"data/data.pkl", "wb") as handle:
         pickle.dump(data, handle)
     print("Done")
-    
 
 
 if __name__ == "__main__":

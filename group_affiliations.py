@@ -72,21 +72,11 @@ def define_type(affiliation_name, affiliation_type=None):
                 return 3
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-
-    # shared parameters
-    parser.add_argument(
-        "-d",
-        "--data_dir",
-        default="data",
-        help="Directory where data.pkl and affiliation_type_raw.pkl resides",
-    )
-    args = parser.parse_args()
-    with open(f"{args.data_dir}/data.pkl", "rb") as f:
+def get_affiliation_groups(data_dir):
+    with open(f"{data_dir}/data.pkl", "rb") as f:
         data = pickle.load(f)
 
-    with open(f"{args.data_dir}/affiliation_type_raw.pkl", "rb") as f:
+    with open(f"{data_dir}/affiliation_type_raw.pkl", "rb") as f:
         file = pickle.load(f)
         idx = np.array(list(file.keys())).astype(int)
         descriptions = np.array(list(file.values()))
@@ -103,5 +93,22 @@ if __name__ == "__main__":
     for k, v in hardcoded_entries.items():
         affiliation_group[np.where(np.isin(idx, v))[0]] = k
 
+    return idx, affiliations, affiliation_group
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+
+    # shared parameters
+    parser.add_argument(
+        "-d",
+        "--data_dir",
+        default="data",
+        help="Directory where data.pkl and affiliation_type_raw.pkl resides",
+    )
+    args = parser.parse_args()
+    idx, affiliations, affiliation_group = get_affiliation_groups(args.data_dir)
+
     for k, v in mapping_entities.items():
         print(f"{v.title()} in the top {len(idx)}: {(affiliation_group == k).sum()}")
+

@@ -204,3 +204,7 @@ Citations: 352, arxiv cs hc (Human-Computer Interaction) -> arxiv cs cv (Compute
 Citations: 349, arxiv cs ma (Multiagent Systems) -> arxiv cs ai (Artificial Intelligence)\
 Citations: 346, arxiv cs ne (Neural and Evolutionary Computing) -> arxiv cs ai (Artificial Intelligence)\
 
+# Usage
+```
+python3 affilation_interactions.py --fields "Computer Vision and Pattern Recognition" "Artificial Intelligence" "Machine Learning"
+```

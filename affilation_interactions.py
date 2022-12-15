@@ -3,6 +3,7 @@ import pickle
 
 import numpy as np
 from group_affiliations import get_affiliation_groups, mapping_entities
+from analysis import full_field_name
 from parse_mag import Paper, PaperAuthor, Affiliation
 
 def author_group_name(author_group):
@@ -15,7 +16,9 @@ def author_group_name(author_group):
     return name
         
 
-def inter_group_citations(data, affiliation_idx, affiliation_group):
+# analyze citations between different affiliation groups
+# filter for papers in fields, if list is empty consider all fields
+def inter_group_citations(data, affiliation_idx, affiliation_group, fields=[]):
     # filter for papers with affiliations that we have grouping information for
     papers = data['papers']
     affiliations = data['affiliations']
@@ -40,7 +43,8 @@ def inter_group_citations(data, affiliation_idx, affiliation_group):
         author_group = set()
         author_aids = [author.affiliation_id for author in paper.authors]
         skip_paper = any(id not in id_to_idx or id_to_idx[id] not in idx_to_afg for id in author_aids)
-        if skip_paper:
+        skip_field = len(fields) > 0 and full_field_name[paper.field] not in fields
+        if skip_paper or skip_field:
             # don't have sufficient affiliation info for one of the authors
             continue
         papers_analyzed += 1
@@ -89,8 +93,9 @@ if __name__ == "__main__":
         default="data",
         help="Directory where data.pkl and affiliation_type_raw.pkl resides",
     )
+    parser.add_argument("-f", "--fields", nargs="+", default=[])
     args = parser.parse_args()
     with open(f"{args.data_dir}/data.pkl", "rb") as fh:
         data = pickle.load(fh)
     idx, _, affiliation_group = get_affiliation_groups(args.data_dir)
-    inter_group_citations(data, idx, affiliation_group)
+    inter_group_citations(data, idx, affiliation_group, fields=args.fields)

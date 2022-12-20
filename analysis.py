@@ -98,6 +98,9 @@ def citation_matrix_fields(data):
             f2 = field_to_idx[referred_paper.field]
             citations[f1][f2] += 1
 
+    import pdb
+    pdb.set_trace()
+
     return citations
 
 

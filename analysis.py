@@ -49,7 +49,7 @@ full_field_name = {
 }
 
 
-def citation_matrix_institutions(data):
+def citation_matrix_institutions(data, fields=[]):
     papers = data["papers"]
     affiliations = data["affiliations"]
 
@@ -63,6 +63,9 @@ def citation_matrix_institutions(data):
     # citations[x][y] is the number of times affiliation x cites affiliation y
     citations = np.zeros((num_affiliations, num_affiliations))
     for paper in papers.values():
+        skip_field = len(fields) > 0 and full_field_name[paper.field] not in fields
+        if skip_field:
+            continue
         paper_affiliations = set()
 
         for author in paper.authors:
@@ -71,6 +74,9 @@ def citation_matrix_institutions(data):
             paper_affiliations.add(author.affiliation_id)
 
         for referred_paper in paper.referred_papers:
+            skip_field = len(fields) > 0 and full_field_name[referred_paper.field] not in fields
+            if skip_field:
+                continue
             reference_affiliations = set()
             for referred_author in referred_paper.authors:
                 if referred_author.affiliation is None:
